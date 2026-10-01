@@ -1047,7 +1047,7 @@ function renderGuest(){
   const box = $('#histList');
   const p = mePerson();
   if(!p){
-    box.innerHTML = '<div class="empty">이 폰에서 볼 인물을 아직 고르지 않았습니다.<br>관리자 모드 → 인물에서<br><b>“이 사람으로 보기”</b>를 눌러 정하세요.<br><br>(왼쪽 위 ← 를 5초 길게 누르면<br>관리자 모드로 들어갑니다)</div>';
+    box.innerHTML = '<div class="empty">이 폰에서 볼 인물을 아직 고르지 않았습니다.<br>관리자 모드 → 인물에서<br><b>“이 사람으로 보기”</b>를 눌러 정하세요.<br><br>(마이크나 ← 를 5초 길게 누르면<br>관리자 모드로 들어갑니다)</div>';
     return;
   }
   box.innerHTML = historyHtml(p);   /* 검색기록이 없으면 빈 화면 (실제 유튜브와 같음) */
@@ -1811,10 +1811,10 @@ function importData(e){
 
 /* ---------- 이벤트 연결 ----------
    손님 화면은 아무것도 눌리지 않는다 (검색창·마이크·검색기록 모두 반응 없음).
-   ← 화살표를 5초 길게 누르면 관리자 모드. 관리자 상태에서는 마이크를 누르면 관리자 화면이 열린다. */
+   ← 화살표나 마이크를 5초 길게 누르면 관리자 모드. 관리자 상태에서는 마이크를 한 번 누르면 관리자 화면이 열린다. */
 $('#adminClose').onclick = goBack;
 $('#adminGuest').onclick = guestMode;
-$('#btnMic').onclick = ()=>{ if(isAdmin) openAdmin(); };
+$('#btnMic').onclick = ()=>{ if(isAdmin && !$('#adminOverlay').classList.contains('active')) openAdmin(); };
 window.addEventListener('popstate', closeTop);
 
 /* 길게 누를 때 나오는 복사/검색/이미지 저장 메뉴 차단 (입력칸과 관리자 모드는 예외) */
@@ -1826,13 +1826,16 @@ document.addEventListener('contextmenu', e=>{
 });
 document.addEventListener('dragstart', e=>{ if(!isAdmin) e.preventDefault(); });
 
+/* ← 화살표 또는 마이크를 5초 길게 누르면 관리자 모드 (손님 모드에서도 동작) */
 let pressTimer = null;
-const backEl = $('#btnBack');
 function startPress(){ clearTimeout(pressTimer); pressTimer = setTimeout(()=>{ openAdmin(); }, 5000); }
 function cancelPress(){ clearTimeout(pressTimer); }
-backEl.addEventListener('mousedown', startPress);
-backEl.addEventListener('touchstart', startPress, {passive:true});
-['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> backEl.addEventListener(ev, cancelPress));
+['#btnBack', '#btnMic'].forEach(sel=>{
+  const el = $(sel);
+  el.addEventListener('mousedown', startPress);
+  el.addEventListener('touchstart', startPress, {passive:true});
+  ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> el.addEventListener(ev, cancelPress));
+});
 
 /* ---------- 시작 ---------- */
 /* 첫 화면 정하기
