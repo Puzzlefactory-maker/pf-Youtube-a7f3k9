@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" id="appleTitle" content="YouTube">
+<meta name="theme-color" content="#ffffff">
+<link rel="apple-touch-icon" href="./icons/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-192.png">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<link id="manifestLink" rel="manifest" href="./manifest.webmanifest">
+<title>YouTube</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  /* 손님이 글씨를 길게 눌러도 드래그·선택·복사·검색 메뉴가 뜨지 않게 한다.
+     (관리자 입력칸과 진단 결과는 예외로 선택 가능) */
+  #phone { -webkit-user-select:none; -moz-user-select:none; -ms-user-select:none; user-select:none;
+    -webkit-touch-callout:none; }
+  #phone input, #phone textarea, #phone select, #phone #diagOut, #phone .kv {
+    -webkit-user-select:text; -moz-user-select:text; -ms-user-select:text; user-select:text; }
+  #phone img { -webkit-user-drag:none; user-drag:none; -webkit-touch-callout:none; }
+  html,body { height:100%; overscroll-behavior:none; }
+  body {
+    font-family: Roboto, "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "맑은 고딕", sans-serif;
+    background:#333;
+    display:flex; justify-content:center; align-items:center;
+    overflow:hidden;
+    overscroll-behavior:none;
+  }
+
+  /* 폰 프레임 */
+  #phone {
+    width:100%; max-width:430px; height:100vh; height:100dvh; max-height:930px;
+    background:#fff; position:relative; overflow:hidden;
+    display:flex; flex-direction:column;
+    box-shadow:0 0 40px rgba(0,0,0,.4);
+  }
+
+  /* ===================== 유튜브 검색 화면 (손님 화면) ===================== */
+  .yt { background:#fff; color:#0f0f0f; display:flex; flex-direction:column; min-height:0;
+    font-family: Roboto, "Noto Sans KR", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  #ytScreen { flex:1; }
+  .yt-head { height:54px; flex-shrink:0; display:flex; align-items:center; padding:0 7px 0 5px; }
+  .yt-back { width:48px; height:48px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    color:#0f0f0f; }
+  .yt-back svg { width:25px; height:25px; display:block; }
+  .yt-search { flex:1; min-width:0; height:34px; margin-left:6px; border-radius:17px; background:#f2f2f2;
+    display:flex; align-items:center; padding:0 13px; overflow:hidden; white-space:nowrap; }
+  .yt-caret { width:1.6px; height:19px; background:#0f0f0f; flex-shrink:0; margin-right:1px;
+    -webkit-animation:ytBlink 1.06s steps(1) infinite; animation:ytBlink 1.06s steps(1) infinite; }
+  .yt-caret.off { display:none; }
+  @-webkit-keyframes ytBlink { 0%{opacity:1} 50%{opacity:0} }
+  @keyframes ytBlink { 0%{opacity:1} 50%{opacity:0} }
+  .yt-ph { font-size:16px; color:#606060; overflow:hidden; text-overflow:ellipsis; letter-spacing:-.1px; }
+  .yt-mic { width:36px; height:36px; border-radius:50%; background:#f2f2f2; flex-shrink:0; margin-left:8px;
+    display:flex; align-items:center; justify-content:center; color:#0f0f0f; }
+  .yt-mic svg { width:21px; height:21px; display:block; }
+
+  .yt-list { flex:1; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+    padding:6px 0 16px; scrollbar-width:none; -ms-overflow-style:none; }
+  .yt-list::-webkit-scrollbar { width:0; height:0; display:none; }
+  .yt-item { display:flex; align-items:center; min-height:50px; padding:4px 0; }
+  .yt-ico { width:58px; flex-shrink:0; display:flex; justify-content:center; color:#0f0f0f; }
+  .yt-ico svg { width:24px; height:24px; display:block; }
+  .yt-txt { flex:1; min-width:0; padding:0 6px 0 13px; font-size:16px; line-height:1.35; color:#0f0f0f;
+    word-break:break-all; }
+  .yt-fill { width:48px; flex-shrink:0; display:flex; justify-content:center; color:#0f0f0f; }
+  .yt-fill svg { width:22px; height:22px; display:block; }
+
+  /* 빈 화면 안내 */
+  .empty { padding:60px 30px; text-align:center; color:#8a8a8a; font-size:14px; line-height:1.7; }
+
+  /* ===== 관리자 패널 ===== */
+  #adminOverlay { display:none; position:absolute; top:0;right:0;bottom:0;left:0; background:#f4f5f7; z-index:50;
+    flex-direction:column; }
+  #adminOverlay.active { display:flex; }
+  .admin-header { background:#282828; color:#fff; padding:14px 16px; display:flex;
+    align-items:center; justify-content:space-between; flex-shrink:0; }
+  .admin-header h2 { font-size:17px; font-weight:700; }
+  .admin-header button { background:rgba(255,255,255,.15); color:#fff; border:none;
+    padding:8px 14px; border-radius:8px; font-size:14px; cursor:pointer; font-weight:600; }
+  .admin-body { flex:1; overflow-y:auto; padding:16px; }
+  #paneEdit, #panePrev { display:none; }
+  .pane-empty { color:#98a5b2; font-size:13px; text-align:center; padding:40px 16px; }
+
+  /* 이 폰을 쓸 지점 고르기 — 고르기 전에는 내용이 전혀 보이지 않는다 */
+  #pickBranch { position:absolute; top:0;right:0;bottom:0;left:0; z-index:70; background:#f2f2f2; display:none;
+                align-items:center; justify-content:center; padding:22px; }
+  #pickBranch.show { display:flex; }
+  .bp-card { width:100%; max-width:360px; max-height:100%; overflow:auto; background:#fff;
+             border-radius:16px; padding:20px 16px; box-shadow:0 10px 30px rgba(0,0,0,.12); }
+  .bp-logo { width:56px; height:56px; margin:0 auto 12px; border-radius:16px; background:#fff;
+             border:1px solid #eee; display:flex; align-items:center; justify-content:center; }
+  .bp-logo svg { width:38px; height:38px; }
+  .bp-title { font-size:17px; font-weight:800; text-align:center; color:#0f0f0f; }
+  .bp-sub { font-size:12px; color:#8a8f96; text-align:center; margin:6px 0 16px; line-height:1.55; }
+  .bp-row { display:flex; align-items:center; gap:10px; padding:13px 12px; border-radius:12px;
+            cursor:pointer; border:1px solid #e5e5e5; margin-bottom:8px; }
+  .bp-row:hover { background:#fff3f3; border-color:#ff8a8a; }
+  .bp-name { font-size:15.5px; font-weight:700; flex:1; min-width:0; color:#0f0f0f; }
+  .bp-cnt { font-size:12px; color:#8a8f96; font-weight:500; }
+  .bp-go { font-size:12px; color:#cc0000; font-weight:700; white-space:nowrap; }
+  .bp-foot { font-size:11px; color:#a8adb4; text-align:center; margin-top:12px; line-height:1.5; }
+
+  /* PC(마우스 쓰는 넓은 화면): 분류 · 검색기록 편집 · 미리보기 3단 */
+  @media (min-width:1000px) and (pointer:fine){
+    #phone { max-width:none; max-height:none; width:100vw; height:100vh; box-shadow:none; }
+    body { background:#e9edf0; }
+    #ytScreen { max-width:430px; margin:0 auto; width:100%; }  /* 손님 화면은 폰 모양 유지 */
+    .admin-body { display:flex; gap:14px; align-items:stretch; overflow:hidden; padding:14px; }
+    .apane { overflow-y:auto; min-width:0; padding-right:2px; }
+    #paneHome { flex:0 0 360px; }
+    #paneEdit { flex:1 1 auto; display:block; }
+    #panePrev { flex:0 0 400px; display:block; }
+    #editBox { display:none; }               /* 3단에서는 가운데 칸에 따로 나온다 */
+  }
+  .prev-wrap { background:#fff; border-radius:12px; overflow:hidden; border:1px solid #e3e7ec;
+    height:720px; max-height:calc(100vh - 140px); display:flex; flex-direction:column; }
+  .prev-wrap .yt { flex:1; }
+  .prev-cap { font-size:12.5px; color:#6a7a8a; font-weight:700; margin:2px 2px 8px; }
+
+  .admin-section { background:#fff; border-radius:12px; padding:16px; margin-bottom:14px; }
+  .admin-section h3 { font-size:14px; color:#282828; margin-bottom:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:12.5px; color:#6a7a8a; margin-bottom:5px; font-weight:600; }
+  .field input, .field textarea, .field select {
+    width:100%; border:1px solid #d5dae0; border-radius:8px; padding:9px 11px;
+    font-size:14px; font-family:inherit; background:#fff; }
+  .field textarea { resize:vertical; min-height:120px; line-height:1.5; }
+  .btn { border:none; border-radius:8px; padding:10px 14px; font-size:14px; cursor:pointer;
+    font-weight:600; white-space:nowrap; flex-shrink:0; font-family:inherit; }
+  .btn:disabled { opacity:.45; cursor:default; }
+  .btn-primary { background:#282828; color:#fff; }
+  .btn-red { background:#ff0033; color:#fff; }
+  .btn-ghost { background:#eef0f3; color:#282828; }
+  .btn-danger { background:#ffe5e3; color:#d63a2f; }
+  .btn-sm { padding:6px 10px; font-size:12.5px; }
+  .btn-block { width:100%; margin-top:6px; }
+  .row-actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+
+  .admin-list-item { border:1px solid #e3e7ec; border-radius:10px; padding:11px 12px;
+    margin-bottom:9px; background:#fff; }
+  .admin-list-item.on { border-color:#282828; background:#f7f8f9; }
+  .admin-list-item.picked { border-color:#ff4e45; background:#fff5f5; box-shadow:0 0 0 2px #ff003322 inset; }
+  .admin-list-item .top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .admin-list-item .rsub { font-size:12px; color:#8a97a5; margin-top:2px; word-break:break-all; }
+  .me-tag { background:#ff0033; color:#fff; font-size:10.5px; font-weight:700;
+    padding:2px 6px; border-radius:6px; display:inline-block; margin-top:4px; }
+
+  /* 끌어서 순서 바꾸기 */
+  .sortable .admin-list-item { touch-action:manipulation; }
+  .admin-list-item.dragging { opacity:.92; box-shadow:0 8px 20px rgba(0,0,0,.18);
+    border-color:#282828; position:relative; z-index:5; }
+  .drag-hint { font-size:11.5px; color:#98a5b2; margin:0 0 8px; }
+
+  /* 폴더 경로 표시 */
+  .crumb { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+  .crumb-txt { font-size:13px; font-weight:700; color:#282828; word-break:break-all; }
+  .crumb-txt .sep { color:#a8b4c0; font-weight:400; margin:0 3px; }
+  .node-name { font-weight:700; font-size:14.5px; color:#1f1f1f; cursor:pointer; word-break:break-all; }
+  .node-name .pen { font-size:11px; color:#a8b4c0; margin-left:4px; }
+
+  /* 접었다 펴는 섹션 */
+  .admin-section h3.foldable { cursor:pointer; user-select:none; }
+  .fold-arrow { font-size:11px; color:#8a97a5; margin-left:6px; }
+  .admin-section.folded .fold-body { display:none; }
+
+  /* 검색기록 편집 줄 */
+  .hist-row { display:flex; align-items:center; gap:6px; margin-bottom:7px; }
+  .hist-row .no { width:22px; flex-shrink:0; text-align:right; font-size:12px; color:#98a5b2; font-weight:700; }
+  .hist-row input { flex:1; min-width:0; border:1px solid #d5dae0; border-radius:8px; padding:8px 10px;
+    font-size:14px; font-family:inherit; }
+  .hist-row input:focus { outline:none; border-color:#282828; }
+  .hist-row .btn { padding:6px 8px; }
+
+  .hint { font-size:12px; color:#98a5b2; line-height:1.6; margin-top:8px; }
+  .kv { font-size:12.5px; color:#6a7a8a; line-height:1.8; word-break:break-all; }
+  .kv b { color:#282828; }
+
+  .mode-pill { position:absolute; bottom:14px; left:12px; z-index:40; background:rgba(0,0,0,.45);
+    color:#fff; font-size:11px; padding:3px 9px; border-radius:10px; display:none; pointer-events:none; }
+  .mode-pill.show { display:block; }
+
+  .toast { position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.8); color:#fff; padding:10px 18px; border-radius:20px; font-size:13px;
+    z-index:220; opacity:0; transition:opacity .25s; pointer-events:none; max-width:80%; text-align:center; }
+  .toast.show { opacity:1; }
+
+  #confirmBox { display:none; position:absolute; top:0;right:0;bottom:0;left:0; z-index:240; background:rgba(0,0,0,.4);
+    align-items:center; justify-content:center; padding:30px; }
+  #confirmBox.show { display:flex; }
+  .confirm-card { background:#fff; border-radius:14px; padding:22px 20px 16px; width:100%;
+    max-width:300px; box-shadow:0 10px 40px rgba(0,0,0,.3); }
+  .confirm-msg { font-size:15px; color:#282828; line-height:1.5; margin-bottom:18px; text-align:center; white-space:pre-line; }
+  .confirm-actions { display:flex; gap:8px; }
+  .confirm-actions .btn { flex:1; padding:11px; }
+</style>
+<!-- ===================== 구형 브라우저 호환 블록 =====================
+     삼성 인터넷 5.0(2016년 갤럭시) 이상, 크롬 49 이상에서도 앱이 열리도록
+     없는 기능을 대신 채워 넣는다. 최신 기기에서는 아무 일도 하지 않는다. -->
+<style id="oldBrowserCss">
+/* (유튜브 화면은 grid를 쓰지 않는다) */
+@supports not (display:grid){
+  .avatar.grp{ display:flex; flex-wrap:wrap; }
+  .avatar.grp>*{ box-sizing:border-box; }
+  .avatar.grp.n1>*{ width:100%; height:100%; }
+  .avatar.grp.n2>*{ width:50%; height:100%; }
+  .avatar.grp.n3>*,.avatar.grp.n4>*{ width:50%; height:50%; }
+}
+</style>
+<script>
+(function(){
+  'use strict';
+
+  /* ---------- 1. 없는 자바스크립트 기능 채우기 ---------- */
+
+  /* 숫자 앞에 0을 붙일 때 쓴다 (시각 표시). 크롬 57 미만에 없음 */
+  if(!String.prototype.padStart){
+    String.prototype.padStart = function(len, pad){
+      var s = String(this);
+      pad = (pad === undefined) ? ' ' : String(pad);
+      if(s.length >= len || pad === '') return s;
+      var fill = '';
+      while(fill.length < len - s.length) fill += pad;
+      return fill.slice(0, len - s.length) + s;
+    };
+  }
+  if(!String.prototype.padEnd){
+    String.prototype.padEnd = function(len, pad){
+      var s = String(this);
+      pad = (pad === undefined) ? ' ' : String(pad);
+      if(s.length >= len || pad === '') return s;
+      var fill = '';
+      while(fill.length < len - s.length) fill += pad;
+      return s + fill.slice(0, len - s.length);
+    };
+  }
+
+  /* 앱 설치 안내를 닫을 때 쓴다. 크롬 63 미만에 없음 */
+  if(window.Promise && !Promise.prototype['finally']){
+    Promise.prototype['finally'] = function(cb){
+      var P = this.constructor || Promise;
+      return this.then(
+        function(v){ return P.resolve(cb()).then(function(){ return v; }); },
+        function(e){ return P.resolve(cb()).then(function(){ throw e; }); }
+      );
+    };
+  }
+
+  /* 화면 요소를 한꺼번에 훑을 때 쓴다. 크롬 51 미만에 없어서 앱이 멈춘다 */
+  ['NodeList','HTMLCollection','DOMTokenList'].forEach(function(n){
+    var C = window[n];
+    if(C && C.prototype && !C.prototype.forEach){
+      C.prototype.forEach = Array.prototype.forEach;
+    }
+  });
+
+  if(!Object.entries){
+    Object.entries = function(o){
+      var r = [], k;
+      for(k in o){ if(Object.prototype.hasOwnProperty.call(o, k)) r.push([k, o[k]]); }
+      return r;
+    };
+  }
+  if(!Object.values){
+    Object.values = function(o){
+      var r = [], k;
+      for(k in o){ if(Object.prototype.hasOwnProperty.call(o, k)) r.push(o[k]); }
+      return r;
+    };
+  }
+  if(!Array.prototype.includes){
+    Array.prototype.includes = function(v){ return this.indexOf(v) !== -1; };
+  }
+  if(window.Element && !Element.prototype.closest){
+    var m = Element.prototype.matches || Element.prototype.webkitMatchesSelector ||
+            Element.prototype.msMatchesSelector;
+    Element.prototype.matches = m;
+    Element.prototype.closest = function(sel){
+      var e = this;
+      while(e && e.nodeType === 1){ if(m.call(e, sel)) return e; e = e.parentElement; }
+      return null;
+    };
+  }
+
+  /* ---------- 2. 칸 사이 여백(gap) 대신 여백 직접 계산 ---------- */
+  /* 크롬 84 미만에서는 flex 안의 gap이 무시되어 글자·버튼이 다 붙어 보인다.
+     그래서 스타일을 훑어 gap이 쓰인 곳을 찾아 바깥여백으로 바꿔 준다. */
+
+  var gapStyle = null;
+
+  function flexGapWorks(){
+    var box = document.createElement('div');
+    box.style.cssText = 'display:flex;flex-direction:column;row-gap:1px;' +
+                        'position:absolute;visibility:hidden;height:0;overflow:visible';
+    box.appendChild(document.createElement('div'));
+    box.appendChild(document.createElement('div'));
+    var host = document.body || document.documentElement;
+    host.appendChild(box);
+    var ok = box.scrollHeight === 1;
+    host.removeChild(box);
+    return ok;
+  }
+
+  function firstValue(v){
+    v = (v || '').trim();
+    if(!v || v === 'normal') return '';
+    return v.split(/\s+/)[0];
+  }
+  function secondValue(v){
+    v = (v || '').trim();
+    if(!v || v === 'normal') return '';
+    var p = v.split(/\s+/);
+    return p[1] || p[0];
+  }
+
+  function collect(rules, out){
+    if(!rules) return;
+    for(var i = 0; i < rules.length; i++){
+      var r = rules[i];
+      if(r.cssRules && r.cssRules.length) collect(r.cssRules, out);   /* @media 안쪽까지 */
+      if(!r.style || !r.selectorText) continue;
+      if(r.style.gridTemplateColumns || r.style.gridTemplateRows) continue;  /* 표 배치는 따로 처리 */
+      if((r.style.display || '').indexOf('grid') >= 0) continue;
+
+      var g  = r.style.getPropertyValue('gap');
+      var rg = (r.style.getPropertyValue('row-gap')    || firstValue(g)).trim();
+      var cg = (r.style.getPropertyValue('column-gap') || secondValue(g)).trim();
+      if(rg === 'normal') rg = '';
+      if(cg === 'normal') cg = '';
+      if(!rg && !cg) continue;
+
+      out.push({ sel: r.selectorText, rg: rg, cg: cg,
+                 disp: (r.style.display || '').trim(),
+                 dir:  (r.style.flexDirection || '').trim(),
+                 wrap: (r.style.flexWrap || '').trim() });
+    }
+  }
+
+  function buildGapCss(){
+    var found = [];
+    var sheets = document.styleSheets;
+    for(var i = 0; i < sheets.length; i++){
+      try { collect(sheets[i].cssRules, found); } catch(e){ /* 읽을 수 없는 스타일은 건너뛴다 */ }
+    }
+
+    var css = [];
+    for(var k = 0; k < found.length; k++){
+      var f = found[k];
+      var parts = f.sel.split(',');
+      for(var s = 0; s < parts.length; s++){
+        var sel = parts[s].trim();
+        if(!sel || sel.indexOf('::') >= 0) continue;
+
+        /* 실제 화면에 있는 요소를 보고 가로줄인지 세로줄인지 판단한다 */
+        var el = null, cs = null;
+        try { el = document.querySelector(sel); } catch(e){ continue; }
+        if(el && window.getComputedStyle) cs = window.getComputedStyle(el);
+
+        var disp = f.disp || (cs ? cs.display : '');
+        if(disp.indexOf('flex') < 0) continue;          /* flex가 아니면 손대지 않는다 */
+
+        var dir  = f.dir  || (cs ? (cs.flexDirection || 'row') : 'row');
+        var wrap = f.wrap || (cs ? (cs.flexWrap || 'nowrap') : 'nowrap');
+        var column = dir.indexOf('column') === 0;
+
+        if(wrap.indexOf('wrap') === 0){
+          /* 줄바꿈되는 묶음은 모든 칸에 여백을 준다 */
+          if(f.cg) css.push(sel + '>*{margin-right:' + f.cg + '}');
+          if(f.rg) css.push(sel + '>*{margin-bottom:' + f.rg + '}');
+        } else if(column){
+          if(f.rg) css.push(sel + '>*+*{margin-top:' + f.rg + '}');
+        } else {
+          if(f.cg) css.push(sel + '>*+*{margin-left:' + f.cg + '}');
+        }
+      }
+    }
+
+    if(!gapStyle){
+      gapStyle = document.createElement('style');
+      gapStyle.id = 'oldBrowserGap';
+      (document.head || document.documentElement).appendChild(gapStyle);
+    }
+    gapStyle.textContent = css.join('\n');
+  }
+
+  function startGapFix(){
+    try {
+      if(flexGapWorks()) return;            /* 요즘 기기 — 그대로 둔다 */
+      buildGapCss();
+      /* 앱이 화면을 다 그린 뒤 한 번 더 — 그때 생긴 부분까지 맞춘다 */
+      setTimeout(buildGapCss, 1200);
+      setTimeout(buildGapCss, 3000);
+    } catch(e){ /* 실패해도 앱은 그대로 쓸 수 있으니 조용히 넘어간다 */ }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', startGapFix);
+  } else {
+    startGapFix();
+  }
+})();
+</script>
+<!-- =================== 구형 브라우저 호환 블록 끝 =================== -->
+
+</head>
+<body>
+<div id="phone">
+  <div class="mode-pill" id="modePill">관리자 모드</div>
+
+  <!-- 유튜브 검색 화면 (검색창을 누른 상태) -->
+  <div class="yt" id="ytScreen">
+    <div class="yt-head" id="ytHead">
+      <div class="yt-back" id="btnBack">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12H3.8"></path><path d="M10.6 5.2 3.8 12l6.8 6.8"></path></svg>
+      </div>
+      <div class="yt-search">
+        <span class="yt-caret" id="ytCaret"></span><span class="yt-ph" id="ytPh">YouTube 검색</span>
+      </div>
+      <div class="yt-mic" id="btnMic">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8.8" y="2.8" width="6.4" height="11.4" rx="3.2"></rect><path d="M5.4 10.9a6.6 6.6 0 0 0 13.2 0"></path><path d="M12 17.6v3.6"></path></svg>
+      </div>
+    </div>
+    <div class="yt-list" id="histList"></div>
+  </div>
+
+  <!-- 이 폰을 쓸 지점 고르기 -->
+  <div id="pickBranch">
+    <div class="bp-card">
+      <div class="bp-logo">
+        <svg viewBox="0 0 28 20"><rect width="28" height="20" rx="5.6" fill="#ff0033"></rect><path d="M11.2 5.6v8.8L18.6 10z" fill="#fff"></path></svg>
+      </div>
+      <div class="bp-title">이 폰을 쓸 지점을 고르세요</div>
+      <div class="bp-sub">고른 지점의 내용만 보입니다.<br>이 기기에만 저장되며, 나중에 바꿀 수 없습니다.</div>
+      <div id="branchList"></div>
+      <div class="bp-foot">잘못 골랐다면 주소 끝에 <b>?reset=1</b> 을 붙여 다시 여세요.</div>
+    </div>
+  </div>
+
+  <!-- 관리자 패널 -->
+  <div id="adminOverlay" class="">
+    <div class="admin-header">
+      <h2 id="adminTitle">관리자</h2>
+      <div class="row-actions">
+        <button id="adminGuest">손님 모드</button>
+        <button id="adminClose">닫기</button>
+      </div>
+    </div>
+    <div class="admin-body" id="adminBody"><div class="apane" id="paneHome"></div><div class="apane" id="paneEdit"></div><div class="apane" id="panePrev"></div></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div id="confirmBox" class="">
+    <div class="confirm-card">
+      <div class="confirm-msg" id="confirmMsg">지금 화면에 열려 있는 상태로 파일을 만듭니다.
+기능이 바뀐 파일을 새로 받았다면 먼저 새로고침(F5) 후에 만들어 주세요.</div>
+      <div class="confirm-actions">
+        <button class="btn btn-ghost" id="confirmNo">취소</button>
+        <button class="btn btn-danger" id="confirmYes">삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   단서 유튜브 — 크라임씬용 가짜 유튜브 (검색기록 화면)
+   - 손님 모드: 검색창을 누른 화면 + 그 인물의 검색기록만 보인다. 아무것도 눌리지 않는다.
+   - 관리자 모드: 왼쪽 위 ← 화살표를 5초 길게 눌러 진입
+   - 데이터 규칙: 파일에 내장된 DATA_VERSION 이 바뀌면(=새 파일 설치)
+     폰에 저장된 내용을 지우고 파일 내용으로 초기화한다.
+     같은 버전이면 폰에서 수정한 내용이 항상 우선.
+   - 분류: 대분류(지점) › 중분류(테마) › 인물. 인물마다 검색기록이 따로 있다.
+   ============================================================ */
+
+/*__CS_DATA_START__ 아래 두 줄이 이 파일에 들어있는 내용입니다. */
+const DATA_VERSION = "2026-10-01-140841";
+const EMBEDDED_DATA = {
+ "appName": "YouTube",
+ "placeholder": "YouTube 검색",
+ "caret": true,
+ "tree": [
+  {
+   "id": "yb2",
+   "name": "강남2호점",
+   "children": [
+    {
+     "id": "yt2",
+     "name": "성균관",
+     "people": [
+      {
+       "name": "조연출",
+       "history": [
+        "인슐린 하루 4번 투약",
+        "인슐린 바꿔치기",
+        "인슐린 과다투여",
+        "인슐린 저혈당 쇼크",
+        "혈당 높이는 법",
+        "인슐린 부작용",
+        "인슐린 주사기",
+        "당뇨"
+       ],
+       "id": "p1it5ndg"
+      },
+      {
+       "name": "정PD",
+       "history": [],
+       "id": "p1pwg298"
+      },
+      {
+       "name": "한송이",
+       "history": [
+        "펜타닐 투약 사망",
+        "펜타닐 헤로인 동시 투약 사망",
+        "펜타닐 헤로인 차이",
+        "헤로인 펜타닐 은어",
+        "헤로인 은어 밀가루",
+        "헤로인 치사량",
+        "펜타닐 헤로인 치사량",
+        "펜타닐 구하는 법",
+        "헤로인 구하는 법",
+        "마약상 연결하는 법",
+        "마약 구하는 법"
+       ],
+       "id": "p10ctipg"
+      },
+      {
+       "name": "김대표",
+       "history": [],
+       "id": "p1ua9rg4"
+      },
+      {
+       "name": "짱절친",
+       "history": [],
+       "id": "p973u74"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "yb3",
+   "name": "부평점",
+   "children": [
+    {
+     "id": "yt3",
+     "name": "연애프로",
+     "people": [
+      {
+       "id": "pk4r7js",
+       "name": "전세금",
+       "history": [
+        "다른 사람 핸드폰 잠금 푸는 법",
+        "지문 인식 말고 얼굴 인식 뚫는 방법",
+        "안면 인식 잠금 몰래 해제하기",
+        "뉴스 헌터스 얼굴 종이가면 핸드폰 잠금 해제"
+       ]
+      }
+     ]
+    },
+    {
+     "id": "yt4",
+     "name": "분신사바",
+     "people": [
+      {
+       "name": "박하나",
+       "history": [],
+       "id": "p1f2wmjk"
+      },
+      {
+       "name": "유반장",
+       "history": [],
+       "id": "p140fwns"
+      },
+      {
+       "name": "김절친",
+       "history": [],
+       "id": "pnv710s"
+      },
+      {
+       "name": "박두나",
+       "history": [],
+       "id": "p1iyhh0o"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+};
+/*__CS_DATA_END__*/
+
+/* 코드(기능) 버전. 데이터와 별개로 “이 파일의 프로그램이 언제 것인지”를 나타낸다. */
+const CODE_VERSION = '2026-10-01-YT1';
+
+/* 같은 주소에 단서 카카오톡 등 다른 앱이 함께 올라가도 서로 지우지 않도록
+   저장 이름은 모두 cs_youtube / cs-youtube- 로 시작한다. */
+const STORE_KEY = 'cs_youtube_v1';
+const BRANCH_KEY = 'cs_youtube_branch';
+const VIEW_KEY = 'cs_youtube_me';
+const CACHE_PREFIX = 'cs-youtube-';
+
+let data = null;
+let isAdmin = false;
+let deferredInstall = null;
+let swState = '확인 중';
+
+/* ---------- 저장 / 불러오기 (버전 도장 방식) ---------- */
+function deepCopy(o){ return JSON.parse(JSON.stringify(o)); }
+
+const storageOK = (function(){
+  try { localStorage.setItem('__cs_t','1'); localStorage.removeItem('__cs_t'); return true; }
+  catch(e){ return false; }
+})();
+
+/* 뒤로가기 처리 (샌드박스 미리보기에서는 history 사용이 막히므로 직접 닫는다) */
+let histOK = true;
+function pushView(v){
+  try { history.pushState({v:v}, ''); } catch(e){ histOK = false; }
+}
+function closeTop(){
+  if($('#adminOverlay').classList.contains('active')){ closeAdmin(); return; }
+}
+function goBack(){
+  if(histOK){ history.back(); return; }
+  closeTop();
+}
+
+function isMyCache(k){ return k.indexOf(CACHE_PREFIX) === 0; }
+function appDir(){ try{ return new URL('./', location.href).href; }catch(e){ return location.href; } }
+function isMySW(reg){ return String(reg && reg.scope).indexOf(appDir()) === 0; }
+
+function wipeStored(){
+  idbBox = null;
+  try{ idbClear(); }catch(e){}
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  try{
+    if(window.caches && caches.keys){
+      caches.keys().then(keys=>keys.forEach(k=>{ if(isMyCache(k) && k.indexOf(DATA_VERSION)===-1) caches.delete(k); }));
+    }
+  }catch(e){}
+}
+
+/* 파일에 들어있는 내용의 지문.
+   DATA_VERSION 을 고치지 않고 내용만 바꿔도 “새 파일”로 인식하게 해준다. */
+function fingerprint(o){
+  let s;
+  try{ s = JSON.stringify(o); }catch(e){ return 'x'; }
+  let h = 0x811c9dc5;
+  for(let i=0;i<s.length;i++){
+    h = (h ^ s.charCodeAt(i)) >>> 0;
+    h = (h * 0x01000193) >>> 0;
+  }
+  return h.toString(36) + '-' + s.length.toString(36);
+}
+const DATA_FP = fingerprint(EMBEDDED_DATA);
+
+function storedBox(){
+  if(idbBox) return idbBox;
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY)); }catch(e){ return null; }
+}
+
+/* ---------- 저장소 ----------
+   IndexedDB 를 주 저장소로, localStorage 를 보조로 쓴다. */
+const IDB_NAME = 'cs_youtube';
+const IDB_STORE = 'box';
+const IDB_KEY = 'main';
+let idbState = 'ok';        /* ok | unavailable | error */
+let idbBox = null;
+let saveBlocked = false;    /* 저장된 내용을 읽지 못했으면 덮어쓰지 않는다 */
+let saveWarned = false;
+let storeKind = 'localStorage';
+
+function idbOpen(){
+  return new Promise((res, rej)=>{
+    if(!self.indexedDB){ idbState = 'unavailable'; return rej(new Error('없음')); }
+    if(location.protocol === 'file:'){ idbState = 'unavailable'; return rej(new Error('파일 직접 열기')); }
+    let settled = false;
+    const finish = (fn, v)=>{ if(!settled){ settled = true; clearTimeout(timer); fn(v); } };
+    const timer = setTimeout(()=>{
+      if(!settled){ settled = true; idbState = 'unavailable'; rej(new Error('시간 초과')); }
+    }, 2500);
+    let rq;
+    try{ rq = indexedDB.open(IDB_NAME, 1); }
+    catch(e){ idbState = 'unavailable'; return finish(rej, e); }
+    rq.onupgradeneeded = ()=>{ try{ rq.result.createObjectStore(IDB_STORE); }catch(e){} };
+    rq.onsuccess = ()=>{ idbState = 'ok'; finish(res, rq.result); };
+    rq.onerror   = ()=>{ if(idbState !== 'unavailable') idbState = 'error'; finish(rej, rq.error || new Error('열기 실패')); };
+    rq.onblocked = ()=>{ idbState = 'unavailable'; finish(rej, new Error('차단됨')); };
+  });
+}
+/* “내용이 없음”과 “읽지 못함”은 완전히 다르다 */
+function idbRead(){
+  return idbOpen().then(db=> new Promise(res=>{
+    let tx;
+    try{ tx = db.transaction(IDB_STORE, 'readonly'); }
+    catch(e){ return res({ok:false, value:null}); }
+    const rq = tx.objectStore(IDB_STORE).get(IDB_KEY);
+    rq.onsuccess = ()=> res({ok:true, value:rq.result || null});
+    rq.onerror   = ()=> res({ok:false, value:null});
+  })).catch(()=> ({ok:false, value:null}));
+}
+function idbWrite(v){
+  return idbOpen().then(db=> new Promise((res, rej)=>{
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(v, IDB_KEY);
+    tx.oncomplete = ()=> res(true);
+    tx.onerror    = ()=> rej(tx.error || new Error('저장 실패'));
+    tx.onabort    = ()=> rej(tx.error || new Error('저장 중단'));
+  }));
+}
+function idbClear(){
+  return idbOpen().then(db=> new Promise(res=>{
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(IDB_KEY);
+    tx.oncomplete = ()=> res(true);
+    tx.onerror    = ()=> res(false);
+    tx.onabort    = ()=> res(false);
+  })).catch(()=> false);
+}
+let persistState = '확인 중';
+function askPersist(){
+  try{
+    if(!navigator.storage || !navigator.storage.persist){ persistState = '지원 안 함'; return Promise.resolve(); }
+    return (navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false))
+      .then(p=> p ? true : navigator.storage.persist())
+      .then(p=>{ persistState = p ? '켜짐' : '꺼짐'; })
+      .catch(()=>{ persistState = '알 수 없음'; });
+  }catch(e){ persistState = '알 수 없음'; return Promise.resolve(); }
+}
+
+/* 파일에서 막 읽어온 상태의 지문. 이후 내용이 달라지면 “이 기기에만 저장된 수정”이다 */
+let baseFp = null;
+
+function load(){
+  return idbRead().then(got=>{
+    let box = got.value;
+    if(!got.ok && idbState === 'error') saveBlocked = true;
+    storeKind = (idbState === 'ok') ? 'IndexedDB' : 'localStorage';
+    if(!box){
+      try{ box = JSON.parse(localStorage.getItem(STORE_KEY)); }catch(e){ box = null; }
+    }
+    if(box && box.data && box.version === DATA_VERSION && box.fp === DATA_FP){
+      idbBox = box;
+      baseFp = box.base || null;
+      return normalize(box.data);
+    }
+    if(!saveBlocked) wipeStored();
+    const fresh = normalize(deepCopy(EMBEDDED_DATA));
+    baseFp = fingerprint(fresh);
+    return fresh;
+  });
+}
+function hasLocalEdits(){
+  return !!baseFp && fingerprint(data) !== baseFp;
+}
+
+function save(){
+  clearTimeout(saveTimer); saveTimer = null;
+  if(saveBlocked) return true;
+  const box = { version: DATA_VERSION, fp: DATA_FP, base: baseFp,
+                savedAt: new Date().toISOString(), data: data };
+  idbBox = box;
+  idbWrite(box).then(()=>{ saveWarned = false; }).catch(()=>{
+    if(!saveWarned){ saveWarned = true; toast('저장하지 못했습니다. 내보내기로 백업해 주세요.'); }
+  });
+  if(storageOK){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(box)); }catch(e){} }
+  return true;
+}
+/* 글자를 칠 때마다 저장하지 않고 잠깐 멈췄을 때 저장한다 */
+let saveTimer = null;
+function saveSoon(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 350);
+}
+function flushSave(){ if(saveTimer) save(); }
+window.addEventListener('pagehide', flushSave);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState === 'hidden') flushSave(); });
+
+function storageKB(){
+  try{ return Math.round(JSON.stringify({version:DATA_VERSION, data:data}).length/1024); }
+  catch(e){ return 0; }
+}
+
+/* ---------- 새 파일 자동 감지 (재설치·파일 교체 반영) ---------- */
+const MARK_S = '/*__CS' + '_DATA_START__';
+const MARK_E = '/*__CS' + '_DATA_END__*/';
+
+function readFileData(txt){
+  const i = txt.indexOf(MARK_S), j = txt.indexOf(MARK_E);
+  if(i < 0 || j <= i) return null;
+  try{
+    const block = txt.slice(i, j).replace(MARK_S, '/*');
+    return (new Function(block + '\nreturn { v: DATA_VERSION, d: EMBEDDED_DATA };'))();
+  }catch(e){ return null; }
+}
+
+function forceUpdate(){
+  const go = ()=> location.replace(location.pathname);
+  const steps = [];
+  idbBox = null;
+  try{ steps.push(idbClear()); }catch(e){}
+  try{ localStorage.removeItem(STORE_KEY); }catch(e){}
+  try{
+    if(window.caches && caches.keys){
+      steps.push(caches.keys().then(ks=>Promise.all(ks.filter(isMyCache).map(k=>caches.delete(k)))));
+    }
+  }catch(e){}
+  try{
+    if(navigator.serviceWorker && navigator.serviceWorker.getRegistrations){
+      steps.push(navigator.serviceWorker.getRegistrations().then(rs=>Promise.all(rs.filter(isMySW).map(r=>r.unregister()))));
+    }
+  }catch(e){}
+  Promise.all(steps).then(go, go);
+}
+
+function countAll(d){
+  const c = { c1:0, c2:0, people:0, hist:0 };
+  (d && d.tree || []).forEach(a=>{
+    if(!a) return; c.c1++;
+    (a.children||[]).forEach(b=>{
+      if(!b) return; c.c2++;
+      (b.people||[]).forEach(p=>{ if(!p) return; c.people++; c.hist += histOf(p).length; });
+    });
+  });
+  return c;
+}
+
+function checkForUpdate(manual){
+  if(location.protocol.indexOf('http') !== 0){
+    if(manual) toast('로컬 서버(localhost)로 열었을 때만 확인할 수 있습니다');
+    return;
+  }
+  fetch('./index.html?_uc=' + Date.now(), {cache:'no-store'})
+    .then(r=> r.ok ? r.text() : Promise.reject())
+    .then(txt=>{
+      const got = readFileData(txt);
+      if(!got){ if(manual) toast('파일을 확인할 수 없습니다'); return; }
+      const fileFp = fingerprint(got.d);
+      const same = (got.v === DATA_VERSION) && (fileFp === DATA_FP);
+      const info = document.getElementById('updInfo');
+      if(info){
+        const c = countAll(got.d);
+        info.innerHTML = '서버 파일 버전 <b>' + esc(got.v) + '</b> · 지문 <b>' + esc(fileFp) + '</b><br>'
+          + '서버 파일 내용 <b>인물 ' + c.people + '명 · 검색기록 ' + c.hist + '개</b><br>'
+          + '판정 <b>' + (same ? '지금 보이는 내용과 같음' : '다름 → 새 내용으로 교체') + '</b>';
+      }
+      if(same){ if(manual) toast('이미 최신 파일입니다'); return; }
+      const tag = got.v + '|' + fileFp;
+      let tried = null;
+      try{ tried = sessionStorage.getItem('cs_yt_upd'); }catch(e){}
+      if(!manual && tried === tag){
+        toast('새 파일이 있는데 적용되지 않았습니다. 관리자 모드에서 “새 파일 확인”을 눌러주세요.');
+        return;
+      }
+      try{ sessionStorage.setItem('cs_yt_upd', tag); }catch(e){}
+      toast('새 파일을 발견했습니다. 새 내용으로 다시 엽니다…');
+      setTimeout(forceUpdate, 700);
+    })
+    .catch(()=>{ if(manual) toast('서버에 연결할 수 없습니다. 서버 앱이 켜져 있는지 확인하세요.'); });
+}
+
+/* ---------- 내용 정리 (빈 항목·빠진 값 채우기) ---------- */
+function id(){ return 'x'+Math.random().toString(36).slice(2,9); }
+function normKey(s){ return String(s||'').trim().toLowerCase().replace(/\s+/g,'_'); }
+/* 인물 id 는 이름에서 만들어 어느 기기에서 만들어도 같게 한다
+   (파일을 새로 받아도 폰에 고른 인물이 그대로 유지되도록) */
+function personId(name){
+  const s = normKey(name);
+  let h = 0x811c9dc5;
+  for(let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = (h * 0x01000193) >>> 0; }
+  return 'p' + h.toString(36);
+}
+function histOf(p){ return (p && Array.isArray(p.history)) ? p.history.filter(t=>String(t||'').trim() !== '') : []; }
+const isObj = o => !!o && typeof o === 'object';
+
+function normalize(d){
+  if(!isObj(d)) d = {};
+  d.appName = String(d.appName || '').trim() || 'YouTube';
+  if(typeof d.placeholder !== 'string' || !d.placeholder.trim()) d.placeholder = 'YouTube 검색';
+  if(d.caret === undefined) d.caret = true;
+  if(!Array.isArray(d.tree)) d.tree = [];
+  d.tree = d.tree.filter(isObj);
+  d.tree.forEach(c1=>{
+    if(!c1.id) c1.id = id();
+    c1.name = String(c1.name || '지점');
+    if(!Array.isArray(c1.children)) c1.children = [];
+    c1.children = c1.children.filter(isObj);
+    c1.children.forEach(c2=>{
+      if(!c2.id) c2.id = id();
+      c2.name = String(c2.name || '테마');
+      if(!Array.isArray(c2.people)) c2.people = [];
+      c2.people = c2.people.filter(isObj);
+      const used = {};
+      c2.people.forEach(p=>{
+        p.name = String(p.name || '인물');
+        if(!p.id || used[p.id]){
+          let pid = personId(p.name), n = 2;
+          while(used[pid]) pid = personId(p.name) + '_' + (n++);
+          p.id = pid;
+        }
+        used[p.id] = 1;
+        if(!Array.isArray(p.history)) p.history = [];
+        p.history = p.history.filter(t=> typeof t === 'string' || typeof t === 'number').map(String);
+      });
+    });
+  });
+  return d;
+}
+
+/* ---------- 이 폰의 지점 잠금 ----------
+   폰 한 대는 한 지점만 본다. 처음 실행할 때 고르고, 그 뒤에는 바꿀 수 없다.
+   (바꿔야 하면 주소 끝에 ?reset=1 을 붙여 이 기기 설정을 초기화한다) */
+let branchLock = null;              /* {id, name} — 기기마다 따로 저장된다 */
+function loadBranch(){
+  try{ const v = JSON.parse(localStorage.getItem(BRANCH_KEY)); branchLock = isObj(v) ? v : null; }
+  catch(e){ branchLock = null; }
+}
+function saveBranch(){
+  try{
+    if(branchLock) localStorage.setItem(BRANCH_KEY, JSON.stringify(branchLock));
+    else localStorage.removeItem(BRANCH_KEY);
+  }catch(e){}
+}
+/* 잠긴 지점. 이름이 바뀌어도 id 로 따라가고, id 가 바뀌면 이름으로 찾아 고쳐 둔다 */
+function lockedC1(){
+  if(!branchLock || !data) return null;
+  const byId = data.tree.find(c=>c.id === branchLock.id);
+  if(byId){
+    if(branchLock.name !== byId.name){ branchLock.name = byId.name; saveBranch(); }
+    return byId;
+  }
+  const byName = data.tree.find(c=>c.name === branchLock.name);
+  if(byName){ branchLock = {id:byName.id, name:byName.name}; saveBranch(); return byName; }
+  return null;
+}
+/* PC(편집용)에서는 잠그지 않는다 — 제작자는 전체를 봐야 한다 */
+function branchLocked(){ return !wideAdmin() && !!lockedC1(); }
+function setBranch(c1){ branchLock = {id:c1.id, name:c1.name}; saveBranch(); }
+function allowedC1s(){
+  const lk = branchLocked() ? lockedC1() : null;
+  return lk ? [lk] : data.tree;
+}
+function enforceBranchLock(){
+  const lk = branchLocked() ? lockedC1() : null;
+  if(!lk) return;
+  if(treePath[0] !== lk.id){ treePath = [lk.id]; editPid = ''; }
+}
+function treeMinDepth(){ return branchLocked() ? 1 : 0; }
+
+/* ---------- 이 기기에서 볼 인물 (테마 + 인물) ----------
+   viewAs = { c2:{id,name}, p:{id,name} } — 기기마다 따로 저장된다.
+   id 로 먼저 찾고, 못 찾으면 이름으로 찾아 고쳐 둔다
+   (내용을 새 파일로 바꿔도 폰에서 고른 사람이 그대로 유지된다) */
+let viewAs = null;
+function loadView(){
+  try{ const v = JSON.parse(localStorage.getItem(VIEW_KEY)); viewAs = isObj(v) ? v : null; }
+  catch(e){ viewAs = null; }
+}
+function saveView(){
+  try{
+    if(viewAs) localStorage.setItem(VIEW_KEY, JSON.stringify(viewAs));
+    else localStorage.removeItem(VIEW_KEY);
+  }catch(e){}
+}
+function findC2(want){
+  if(!isObj(want)) return null;
+  const c1s = allowedC1s();
+  let hit = null;
+  c1s.forEach(c1=> (c1.children||[]).forEach(c2=>{ if(!hit && want.id && c2.id === want.id) hit = {c1:c1, c2:c2}; }));
+  if(!hit && want.name){
+    c1s.forEach(c1=> (c1.children||[]).forEach(c2=>{ if(!hit && c2.name === want.name) hit = {c1:c1, c2:c2}; }));
+  }
+  return hit;
+}
+function findPerson(c2, want){
+  if(!c2 || !isObj(want)) return null;
+  const ps = c2.people || [];
+  return (want.id && ps.find(p=>p.id === want.id))
+      || (want.name && ps.find(p=>normKey(p.name) === normKey(want.name)))
+      || null;
+}
+/* 고른 인물 {c1, c2, p} — 없으면 null */
+function meRef(){
+  if(!viewAs || !data) return null;
+  const t = findC2(viewAs.c2);
+  const p = t ? findPerson(t.c2, viewAs.p) : null;
+  if(!t || !p) return null;
+  if(viewAs.c2.id !== t.c2.id || viewAs.c2.name !== t.c2.name || viewAs.p.id !== p.id || viewAs.p.name !== p.name){
+    viewAs = { c2:{id:t.c2.id, name:t.c2.name}, p:{id:p.id, name:p.name} }; saveView();
+  }
+  return { c1:t.c1, c2:t.c2, p:p };
+}
+function mePerson(){ const r = meRef(); return r ? r.p : null; }
+function setMe(c2, p){
+  viewAs = (c2 && p) ? { c2:{id:c2.id, name:c2.name}, p:{id:p.id, name:p.name} } : null;
+  saveView();
+}
+function isMe(c2, p){
+  const r = meRef();
+  return !!r && r.c2 === c2 && r.p === p;
+}
+
+/* ---------- 유틸 ---------- */
+const $ = s => document.querySelector(s);
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+function confirmDialog(message, onYes, yesLabel){
+  const box = $('#confirmBox');
+  $('#confirmMsg').textContent = message;
+  box.classList.add('show');
+  const yes = $('#confirmYes'), no = $('#confirmNo');
+  yes.textContent = yesLabel || '삭제';
+  const close = ()=>{ box.classList.remove('show'); yes.onclick=null; no.onclick=null; yes.textContent = '삭제'; };
+  yes.onclick = ()=>{ close(); onYes && onYes(); };
+  no.onclick = close;
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- 손님 화면 ---------- */
+const ICON_HIST = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.4 12a7.6 7.6 0 1 0 2.2-5.4"></path><path d="M6.4 3.4v3.4h3.4"></path><path d="M12 7.8v4.6l3.1 1.9"></path></svg>';
+const ICON_FILL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 17.5 6.8 6.8"></path><path d="M6.6 15.2V6.6h8.6"></path></svg>';
+
+function historyHtml(p){
+  return histOf(p).map(t=> `
+    <div class="yt-item">
+      <div class="yt-ico">${ICON_HIST}</div>
+      <div class="yt-txt">${esc(t)}</div>
+      <div class="yt-fill">${ICON_FILL}</div>
+    </div>`).join('');
+}
+function applySearchBar(root){
+  const r = root || document;
+  const ph = r.querySelector('.yt-ph'); if(ph) ph.textContent = data.placeholder || 'YouTube 검색';
+  const ca = r.querySelector('.yt-caret'); if(ca) ca.classList.toggle('off', data.caret === false);
+}
+function renderGuest(){
+  applyAppIdentity();
+  applySearchBar(document.getElementById('ytScreen'));
+  const box = $('#histList');
+  const p = mePerson();
+  if(!p){
+    box.innerHTML = '<div class="empty">이 폰에서 볼 인물을 아직 고르지 않았습니다.<br>관리자 모드 → 인물에서<br><b>“이 사람으로 보기”</b>를 눌러 정하세요.<br><br>(왼쪽 위 ← 를 5초 길게 누르면<br>관리자 모드로 들어갑니다)</div>';
+    return;
+  }
+  box.innerHTML = historyHtml(p);   /* 검색기록이 없으면 빈 화면 (실제 유튜브와 같음) */
+}
+
+/* 이 폰을 쓸 지점 고르기 — 지점 이름만 보여준다 (검색기록은 나오지 않는다) */
+function renderBranchPicker(){
+  const box = $('#pickBranch');
+  const list = $('#branchList');
+  list.innerHTML = '';
+  data.tree.forEach(c1=>{
+    const row = document.createElement('div');
+    row.className = 'bp-row';
+    row.innerHTML = `
+      <div class="bp-name">${esc(c1.name)}<div class="bp-cnt">테마 ${(c1.children||[]).length}개</div></div>
+      <span class="bp-go">이 지점으로</span>`;
+    row.onclick = ()=>{
+      setBranch(c1);
+      box.classList.remove('show');
+      isAdmin = true;
+      renderGuest();
+      openAdmin(true);
+      toast('“' + c1.name + '” 지점으로 설정했습니다');
+    };
+    list.appendChild(row);
+  });
+  box.classList.add('show');
+}
+
+/* ---------- 앱 이름 / 설치 ---------- */
+function appNameOf(){ return (String((data && data.appName) || '').trim()) || 'YouTube'; }
+function applyAppIdentity(){
+  const nm = appNameOf();
+  document.title = nm;
+  const at = document.getElementById('appleTitle'); if(at) at.content = nm;
+}
+
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  deferredInstall = e;
+  refreshAdminInfo();
+});
+window.addEventListener('appinstalled', ()=>{ deferredInstall = null; refreshAdminInfo(); });
+
+/* 설치가 안 될 때 원인을 한 화면에 모아 보여준다 */
+function runDiag(){
+  const out = [];
+  const ua = navigator.userAgent || '';
+  const cm = ua.match(/Chrome\/(\d+)/);
+  const cv = cm ? Number(cm[1]) : 0;
+  const inApp = /; wv\)|\bwv\b|KAKAOTALK|FBAN|FB_IAB|Instagram|NAVER|Line\//i.test(ua);
+  out.push('코드 버전: ' + CODE_VERSION + ' / 파일 버전: ' + DATA_VERSION);
+  out.push('브라우저: ' + (cm ? ('Chrome ' + cm[1]) : '크롬 아님 또는 확인 불가'));
+  out.push('버전 판정: ' + (cv === 0 ? '확인 불가' : (cv >= 76 ? '앱 설치 지원 버전' : '너무 오래된 버전 — 크롬 업데이트 필요')));
+  out.push('내장 브라우저: ' + (inApp ? '예 — 크롬 앱에서 직접 열어야 설치됩니다' : '아니오'));
+  out.push('https(보안) 상태: ' + (window.isSecureContext ? '정상' : '아님 — 설치 불가'));
+  out.push('서비스워커 지원: ' + (('serviceWorker' in navigator) ? '지원' : '지원 안 함'));
+  out.push('서비스워커 상태: ' + swState);
+  out.push('설치 신호(beforeinstallprompt): ' + (deferredInstall ? '받음' : '아직 없음'));
+  const box = document.getElementById('diagOut');
+  box.style.display = 'block';
+  box.textContent = out.join('\n') + '\n서버 응답 확인 중…';
+  const jobs = [];
+  jobs.push(fetch('./sw.js?diag=' + Date.now(), {cache:'no-store'})
+    .then(r=> 'sw.js 응답: ' + r.status + ' / ' + (r.headers.get('content-type')||'?'))
+    .catch(e=> 'sw.js 응답: 실패 (' + e + ')'));
+  jobs.push(fetch('./manifest.webmanifest', {cache:'no-store'})
+    .then(r=> r.json().then(j=> '매니페스트 응답: ' + r.status + ' / 이름 ' + j.name, ()=> '매니페스트 응답: ' + r.status + ' / 내용 읽기 실패'))
+    .catch(()=> '매니페스트 응답: 실패'));
+  jobs.push((('serviceWorker' in navigator) ? navigator.serviceWorker.getRegistrations() : Promise.resolve([]))
+    .then(rs=> '등록된 서비스워커: ' + rs.length + '개')
+    .catch(()=> '등록 목록 확인 실패'));
+  Promise.all(jobs).then(extra=>{ box.textContent = out.concat(extra).join('\n'); });
+}
+function refreshAdminInfo(){
+  const sw = document.getElementById('swState'); if(sw) sw.textContent = swState;
+  const sk = document.getElementById('storeKind'); if(sk) sk.textContent = storeKind;
+  const ps = document.getElementById('persistState'); if(ps) ps.textContent = persistState;
+  const ins = document.getElementById('canInstall');
+  if(ins) ins.textContent = deferredInstall ? '예 — 설치 버튼을 누르세요' : '아직 아님';
+}
+function installApp(){
+  if(deferredInstall){
+    deferredInstall.prompt();
+    deferredInstall.userChoice.finally(()=>{ deferredInstall = null; });
+    return;
+  }
+  if(location.protocol === 'file:'){
+    toast('파일로 직접 연 상태에서는 설치할 수 없습니다. 로컬 서버(localhost)로 여세요.');
+    return;
+  }
+  if(!window.isSecureContext){
+    toast('localhost 또는 https 로 접속해야 앱 설치가 가능합니다.');
+    return;
+  }
+  toast('크롬 메뉴 ⋮ → “앱 설치” 또는 “홈 화면에 추가”를 눌러주세요.');
+}
+
+/* ============================================================
+   관리자 모드
+   ============================================================ */
+let treePath = [];          /* [] | [대분류id] | [대분류id, 중분류id] */
+let editPid = '';           /* 검색기록을 편집 중인 인물 (지금 중분류 안) */
+let editingNode = '';       /* 이름 편집 중인 항목 (c1:id / c2:id / P:id) */
+let foldState = { screen:true, bulk:true };
+
+function wideAdmin(){
+  try{ return window.matchMedia('(min-width:1000px) and (pointer:fine)').matches; }
+  catch(e){ return false; }
+}
+function openAdmin(fromTop){
+  isAdmin = true;
+  $('#modePill').classList.add('show');
+  $('#adminOverlay').classList.add('active');
+  const r = meRef();
+  if(fromTop || !r){
+    /* 처음 설치한 기기 — 대분류(지점 잠금이면 그 지점)부터 고르게 한다 */
+    const lk = branchLocked() ? lockedC1() : null;
+    treePath = lk ? [lk.id] : [];
+    editPid = '';
+  } else {
+    /* 지금 이 기기에서 보는 인물이 있는 테마를 펼치고, 그 인물을 편집 상태로 연다 */
+    treePath = [r.c1.id, r.c2.id];
+    editPid = r.p.id;
+  }
+  editingNode = '';
+  renderAdminHome(true);
+  pushView('admin');
+}
+function closeAdmin(){
+  flushSave();
+  $('#adminOverlay').classList.remove('active');
+  renderGuest();
+}
+function guestMode(){
+  isAdmin = false;
+  $('#modePill').classList.remove('show');
+  toast('손님 모드로 전환되었습니다');
+  if($('#adminOverlay').classList.contains('active')) goBack();
+  else renderGuest();
+}
+
+function curC1(){ return treePath[0] ? data.tree.find(c=>c.id===treePath[0]) : null; }
+function curC2(){ const c1 = curC1(); return (c1 && treePath[1]) ? (c1.children||[]).find(c=>c.id===treePath[1]) : null; }
+function editPerson(){ const c2 = curC2(); return (c2 && editPid) ? (c2.people||[]).find(p=>p.id===editPid) || null : null; }
+function breadcrumbHtml(){
+  const c1 = curC1(), c2 = curC2();
+  if(!c1) return '<span class="crumb-txt">전체 지점</span>';
+  return '<span class="crumb-txt">' + esc(c1.name) + (c2 ? '<span class="sep">›</span>' + esc(c2.name) : '') + '</span>';
+}
+function nameEditorHtml(name){
+  return `
+    <div class="field" style="margin:8px 0 0">
+      <label>이름</label>
+      <input id="nodeName" value="${esc(name)}">
+    </div>
+    <div class="row-actions">
+      <button class="btn btn-primary btn-sm" id="nodeSave">저장</button>
+      <button class="btn btn-ghost btn-sm" id="nodeCancel">취소</button>
+    </div>`;
+}
+function c1Count(c1){
+  let people = 0, hist = 0;
+  (c1.children||[]).forEach(c2=> (c2.people||[]).forEach(p=>{ people++; hist += histOf(p).length; }));
+  return { subs:(c1.children||[]).length, people:people, hist:hist };
+}
+function treeItemsHtml(){
+  const c1 = curC1(), c2 = curC2();
+  let html = '';
+  if(!c1){
+    if(!data.tree.length) return '<div class="hint">지점이 없습니다. 아래에서 새 지점을 만드세요.</div>';
+    data.tree.forEach(node=>{
+      const cnt = c1Count(node);
+      html += `
+        <div class="admin-list-item" data-sort="${node.id}">
+          <div class="top">
+            <div style="min-width:0">
+              <div class="node-name" data-rename="c1:${node.id}">${esc(node.name)}<span class="pen">✎</span></div>
+              <div class="rsub">테마 ${cnt.subs}개 · 인물 ${cnt.people}명 · 검색기록 ${cnt.hist}개</div>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn-ghost btn-sm" data-enter="${node.id}">열기</button>
+              <button class="btn btn-danger btn-sm" data-cdel="c1:${node.id}">삭제</button>
+            </div>
+          </div>
+          ${editingNode === 'c1:' + node.id ? nameEditorHtml(node.name) : ''}
+        </div>`;
+    });
+    return html;
+  }
+  if(!c2){
+    if(!c1.children.length) return '<div class="hint">테마가 없습니다. 아래에서 새 테마를 만드세요.</div>';
+    c1.children.forEach(node=>{
+      const hist = (node.people||[]).reduce((a,p)=>a+histOf(p).length, 0);
+      html += `
+        <div class="admin-list-item" data-sort="${node.id}">
+          <div class="top">
+            <div style="min-width:0">
+              <div class="node-name" data-rename="c2:${node.id}">${esc(node.name)}<span class="pen">✎</span></div>
+              <div class="rsub">인물 ${(node.people||[]).length}명 · 검색기록 ${hist}개</div>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn-ghost btn-sm" data-enter="${node.id}">열기</button>
+              <button class="btn btn-ghost btn-sm" data-ccopy="${node.id}">복제</button>
+              <button class="btn btn-danger btn-sm" data-cdel="c2:${node.id}">삭제</button>
+            </div>
+          </div>
+          ${editingNode === 'c2:' + node.id ? nameEditorHtml(node.name) : ''}
+        </div>`;
+    });
+    return html;
+  }
+  /* 테마 안 = 인물 명단. 인물마다 검색기록이 따로 있다 */
+  const ps = c2.people || [];
+  if(!ps.length) return '<div class="hint">인물이 없습니다. 아래에서 새 인물을 만드세요.</div>';
+  ps.forEach(p=>{
+    const me = isMe(c2, p);
+    html += `
+      <div class="admin-list-item ${p.id===editPid?'picked':(me?'on':'')}" data-sort="${p.id}">
+        <div class="top" style="justify-content:flex-start">
+          <div class="node-name" data-rename="P:${p.id}">${esc(p.name)}<span class="pen">✎</span></div>
+          <span class="rsub" style="margin:0">검색기록 ${histOf(p).length}개</span>
+          ${me ? '<span class="me-tag" style="margin:0">이 기기의 나</span>' : ''}
+        </div>
+        <div class="row-actions" style="margin-top:8px">
+          <button class="btn ${p.id===editPid?'btn-red':'btn-ghost'} btn-sm" data-pedit="${p.id}">${p.id===editPid?'편집 중':'검색기록 편집'}</button>
+          ${me ? '' : `<button class="btn btn-ghost btn-sm" data-pme="${p.id}">이 사람으로 보기</button>`}
+          <button class="btn btn-danger btn-sm" data-pdel="${p.id}">삭제</button>
+        </div>
+        ${editingNode === 'P:' + p.id ? nameEditorHtml(p.name) : ''}
+      </div>`;
+  });
+  return html;
+}
+
+/* ----- 끌어서 순서 바꾸기 (마우스·터치 공용) ----- */
+function makeSortable(box, onDone){
+  if(!box) return;
+  box.classList.add('sortable');
+  let el = null, armed = false, dragging = false, startY = 0, timer = null;
+  const items = ()=> [].slice.call(box.querySelectorAll('[data-sort]'));
+  const stop = ()=>{
+    clearTimeout(timer);
+    if(el) el.classList.remove('dragging');
+    const did = dragging;
+    el = null; armed = false; dragging = false;
+    if(did) onDone(items().map(x=>x.dataset.sort));
+  };
+  box.addEventListener('pointerdown', e=>{
+    const t = e.target.closest('[data-sort]');
+    if(!t || e.target.closest('button, input, textarea, select, .node-name')) return;
+    el = t; startY = e.clientY; armed = false; dragging = false;
+    if(e.pointerType === 'mouse'){ armed = true; }
+    else { timer = setTimeout(()=>{ armed = true; el.classList.add('dragging'); }, 280); }
+  });
+  box.addEventListener('pointermove', e=>{
+    if(!el) return;
+    if(!armed){
+      if(Math.abs(e.clientY - startY) > 8){ clearTimeout(timer); el = null; }
+      return;
+    }
+    if(!dragging){
+      if(Math.abs(e.clientY - startY) < 4) return;
+      dragging = true;
+      el.classList.add('dragging');
+      try{ el.setPointerCapture(e.pointerId); }catch(err){}
+    }
+    const y = e.clientY;
+    items().forEach(s=>{
+      if(s === el) return;
+      const r = s.getBoundingClientRect();
+      if(y > r.top && y < r.bottom){
+        const mid = r.top + r.height/2;
+        if(y < mid) box.insertBefore(el, s);
+        else box.insertBefore(el, s.nextSibling);
+      }
+    });
+  });
+  box.addEventListener('pointerup', stop);
+  box.addEventListener('pointercancel', stop);
+  box.addEventListener('touchmove', e=>{ if(dragging) e.preventDefault(); }, {passive:false});
+}
+
+function uniqueName(existing, base){
+  let n = base, i = 2;
+  while(existing.indexOf(n) !== -1){ n = base + ' ' + i; i++; }
+  return n;
+}
+
+function bindTreeSection(body){
+  body.querySelectorAll('[data-fold]').forEach(h=>{
+    h.onclick = ()=>{ const k = h.dataset.fold; foldState[k] = !foldState[k]; renderAdminHome(); };
+  });
+  const up = $('#treeUp');
+  if(up) up.onclick = ()=>{
+    if(treePath.length <= treeMinDepth()) return;   /* 잠긴 지점 위로는 못 올라간다 */
+    treePath.pop(); editingNode = ''; editPid = '';
+    renderAdminHome();
+  };
+  body.querySelectorAll('[data-enter]').forEach(b=> b.onclick = ()=>{
+    treePath.push(b.dataset.enter); editingNode = ''; editPid = '';
+    const c2 = curC2();
+    if(c2){
+      /* 테마를 열면 이 기기의 인물(없으면 첫 인물)을 바로 편집 상태로 */
+      const r = meRef();
+      const p = (r && r.c2 === c2) ? r.p : (c2.people||[])[0];
+      editPid = p ? p.id : '';
+    }
+    renderAdminHome(true);
+  });
+  body.querySelectorAll('[data-pedit]').forEach(b=> b.onclick = ()=>{
+    editPid = b.dataset.pedit; renderAdminHome();
+    if(!wideAdmin()){
+      const eb = $('#editBox'); if(eb) eb.scrollIntoView({behavior:'smooth', block:'start'});
+    }
+  });
+  body.querySelectorAll('[data-pme]').forEach(b=> b.onclick = ()=>{
+    const c2 = curC2(); if(!c2) return;
+    const p = c2.people.find(x=>x.id === b.dataset.pme); if(!p) return;
+    setMe(c2, p); editPid = p.id; renderAdminHome();
+    toast('이 기기에서 볼 사람을 “' + p.name + '”(으)로 정했습니다');
+  });
+  body.querySelectorAll('[data-pdel]').forEach(b=> b.onclick = ()=>{
+    const c2 = curC2(); if(!c2) return;
+    const p = c2.people.find(x=>x.id === b.dataset.pdel); if(!p) return;
+    const n = histOf(p).length;
+    confirmDialog('인물 “' + p.name + '” 을(를) 지울까요?' + (n ? '\n검색기록 ' + n + '개도 함께 지워집니다.' : ''), ()=>{
+      const wasMe = isMe(c2, p);
+      c2.people = c2.people.filter(x=>x !== p);
+      if(editPid === p.id) editPid = '';
+      if(wasMe) setMe(null, null);
+      save(); renderAdminHome(); toast('지웠습니다');
+    });
+  });
+  body.querySelectorAll('[data-rename]').forEach(el=>{
+    el.onclick = ev=>{ if(ev.target.classList.contains('pen')){ editingNode = el.dataset.rename; renderAdminHome(); } };
+    el.ondblclick = ()=>{ editingNode = el.dataset.rename; renderAdminHome(); };
+  });
+
+  const nSave = $('#nodeSave');
+  if(nSave){
+    $('#nodeCancel').onclick = ()=>{ editingNode = ''; renderAdminHome(); };
+    const nName = $('#nodeName');
+    nName.onkeydown = e=>{ if(e.key === 'Enter') nSave.click(); };
+    try{ nName.focus(); nName.select(); }catch(e){}
+    nSave.onclick = ()=>{
+      const nameVal = nName.value.trim();
+      if(!nameVal){ toast('이름을 입력하세요'); return; }
+      const kind = editingNode.slice(0, editingNode.indexOf(':'));
+      const nid = editingNode.slice(editingNode.indexOf(':') + 1);
+      if(kind === 'c1'){
+        const node = data.tree.find(c=>c.id === nid);
+        if(node) node.name = nameVal;
+      } else if(kind === 'c2'){
+        const c1 = curC1();
+        const node = c1 && c1.children.find(c=>c.id === nid);
+        if(node) node.name = nameVal;
+      } else if(kind === 'P'){
+        const c2 = curC2();
+        const p = c2 && c2.people.find(x=>x.id === nid);
+        if(p){
+          if(c2.people.some(x=>x !== p && normKey(x.name) === normKey(nameVal))){ toast('같은 이름의 인물이 이미 있습니다'); return; }
+          const wasMe = isMe(c2, p);
+          p.name = nameVal;
+          if(wasMe) setMe(c2, p);
+        }
+      }
+      editingNode = ''; save(); renderAdminHome(); toast('저장되었습니다');
+    };
+  }
+
+  const add = $('#treeAdd');
+  if(add) add.onclick = ()=>{
+    const c1 = curC1(), c2 = curC2();
+    if(!c1){
+      const node = { id:id(), name:uniqueName(data.tree.map(x=>x.name), '새 지점'), children:[] };
+      data.tree.push(node); editingNode = 'c1:' + node.id;
+    } else if(!c2){
+      const node = { id:id(), name:uniqueName(c1.children.map(x=>x.name), '새 테마'), people:[] };
+      c1.children.push(node); editingNode = 'c2:' + node.id;
+    } else {
+      const nm = uniqueName(c2.people.map(p=>p.name), '새 인물');
+      let pid = personId(nm), n = 2;
+      while(c2.people.some(x=>x.id === pid)) pid = personId(nm) + '_' + (n++);
+      c2.people.push({ id:pid, name:nm, history:[] });
+      editPid = pid; editingNode = 'P:' + pid;
+    }
+    save(); renderAdminHome();
+  };
+
+  body.querySelectorAll('[data-cdel]').forEach(b=> b.onclick = ()=>{
+    const v = b.dataset.cdel;
+    const isC1 = (v.indexOf('c1:') === 0);
+    let node, removeIt, people = 0;
+    if(isC1){
+      const i = data.tree.findIndex(c=>c.id === v.slice(3));
+      if(i < 0) return;
+      node = data.tree[i]; people = c1Count(node).people;
+      removeIt = ()=> data.tree.splice(i, 1);
+    } else {
+      const c1 = curC1(); if(!c1) return;
+      const i = c1.children.findIndex(c=>c.id === v.slice(3));
+      if(i < 0) return;
+      node = c1.children[i]; people = (node.people||[]).length;
+      removeIt = ()=> c1.children.splice(i, 1);
+    }
+    const doIt = ()=>{ removeIt(); save(); renderAdminHome(); toast('삭제되었습니다'); };
+    if(people) confirmDialog('“' + node.name + '” 안에 인물 ' + people + '명이 있습니다.\n검색기록까지 모두 삭제할까요?', doIt, '모두 삭제');
+    else confirmDialog('“' + node.name + '” 을(를) 삭제할까요?', doIt);
+  });
+
+  /* 테마 복제 = 인물·검색기록을 통째로 복사 */
+  body.querySelectorAll('[data-ccopy]').forEach(b=> b.onclick = ()=>{
+    const c1 = curC1(); if(!c1) return;
+    const src = c1.children.find(c=>c.id === b.dataset.ccopy); if(!src) return;
+    const copy = deepCopy(src);
+    copy.id = id();
+    copy.name = uniqueName(c1.children.map(x=>x.name), src.name + ' 사본');
+    c1.children.splice(c1.children.indexOf(src) + 1, 0, copy);
+    save(); renderAdminHome(); toast('복제되었습니다');
+  });
+
+  makeSortable($('#treeBox'), order=>{
+    const c1 = curC1(), c2 = curC2();
+    const pick = (arr)=> order.map(v=>arr.find(x=>x.id === v)).filter(Boolean).concat(arr.filter(x=>order.indexOf(x.id) < 0));
+    if(!c1) data.tree = pick(data.tree);
+    else if(!c2) c1.children = pick(c1.children);
+    else c2.people = pick(c2.people);
+    save(); renderAdminHome(); toast('순서가 바뀌었습니다');
+  });
+}
+
+/* ----- 검색기록 편집 ----- */
+function editorHtml(){
+  const c2 = curC2(), p = editPerson();
+  if(!c2) return wideAdmin() ? '<div class="pane-empty">왼쪽에서 <b>지점 › 테마</b>를 열면<br>인물의 검색기록을 여기서 편집합니다.</div>' : '';
+  if(!p) return wideAdmin() ? '<div class="pane-empty">왼쪽 인물 목록에서 <b>검색기록</b>을 누르세요.</div>' : '';
+  const h = p.history;
+  let rows = '';
+  h.forEach((t, i)=>{
+    rows += `
+      <div class="hist-row">
+        <span class="no">${i+1}</span>
+        <input data-hi="${i}" value="${esc(t)}" placeholder="검색어 입력">
+        <button class="btn btn-ghost btn-sm" data-hup="${i}" ${i===0?'disabled':''} title="위로">▲</button>
+        <button class="btn btn-ghost btn-sm" data-hdown="${i}" ${i===h.length-1?'disabled':''} title="아래로">▼</button>
+        <button class="btn btn-danger btn-sm" data-hdel="${i}">삭제</button>
+      </div>`;
+  });
+  return `
+    <div class="admin-section" id="editSec">
+      <h3><span>${esc(p.name)} · 검색기록</span><span class="rsub" style="font-weight:600">${histOf(p).length}개</span></h3>
+      <div class="hint" style="margin:-4px 0 12px">위에서부터 손님 화면에 순서대로 보입니다. (맨 위 = 가장 최근 검색)<br>
+        입력하면 바로 저장됩니다. 빈 줄은 손님 화면에 나오지 않습니다.</div>
+      <div class="row-actions" style="margin-bottom:10px">
+        <button class="btn btn-red btn-sm" id="hAddTop">＋ 맨 위에 추가</button>
+        <button class="btn btn-ghost btn-sm" id="hAddBottom">＋ 맨 아래에 추가</button>
+      </div>
+      <div id="histRows">${rows || '<div class="hint" style="margin:0 0 8px">검색기록이 없습니다. 손님 화면은 검색창만 보입니다.</div>'}</div>
+      ${isMe(c2, p) ? '<div class="hint">이 인물이 <b>이 기기의 나</b>입니다. 손님 화면에 이 검색기록이 보입니다.</div>'
+                     : `<div class="hint">이 기기는 지금 <b>${esc(mePerson() ? mePerson().name : '아무도 고르지 않음')}</b> 의 화면을 보여줍니다.
+                         이 인물로 보려면 <b>이 사람으로 보기</b>를 누르세요.</div>`}
+    </div>
+    <div class="admin-section ${foldState.bulk?'folded':''}">
+      <h3 class="foldable" data-fold="bulk">한 번에 입력 (여러 줄 붙여넣기) <span class="fold-arrow">${foldState.bulk?'▶':'▼'}</span></h3>
+      <div class="fold-body">
+        <div class="field">
+          <textarea id="bulkText" placeholder="한 줄에 검색어 하나씩">${esc(histOf(p).join('\n'))}</textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" id="bulkApply">적은 내용으로 바꾸기</button>
+        <div class="hint">한 줄에 하나씩 적으면 지금 검색기록을 통째로 바꿉니다. 메모장·네이버 관리자에서 복사해 붙여넣을 때 편합니다.</div>
+      </div>
+    </div>`;
+}
+function previewHtml(){
+  const c2 = curC2(), p = editPerson() || (c2 ? null : mePerson());
+  const who = p ? p.name : '';
+  const head = $('#ytHead').cloneNode(true);
+  head.removeAttribute('id');
+  head.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id'));
+  return `
+    <div class="prev-cap">손님 화면 미리보기${who ? ' — ' + esc(who) : ''}</div>
+    <div class="prev-wrap"><div class="yt" id="prevYt">${head.outerHTML}<div class="yt-list">${p ? historyHtml(p) : '<div class="empty">인물을 고르면 미리보기가 나옵니다.</div>'}</div></div></div>`;
+}
+function refreshPreview(){
+  if(!wideAdmin()) return;
+  const pv = $('#panePrev'); if(!pv) return;
+  pv.innerHTML = previewHtml();
+  applySearchBar(pv);
+}
+function renderEditor(){
+  const target = wideAdmin() ? $('#paneEdit') : $('#editBox');
+  if(!target) return;
+  const keep = target.scrollTop;
+  target.innerHTML = editorHtml();
+  target.scrollTop = keep;
+  bindEditor(target);
+  refreshPreview();
+}
+function bindEditor(root){
+  const p = editPerson(); if(!p) return;
+  root.querySelectorAll('[data-fold]').forEach(h=>{
+    h.onclick = ()=>{ const k = h.dataset.fold; foldState[k] = !foldState[k]; renderEditor(); };
+  });
+  const rerender = (focusIdx)=>{
+    save(); renderAdminHome();
+    if(focusIdx !== undefined){
+      const inp = document.querySelector('input[data-hi="' + focusIdx + '"]');
+      if(inp){ try{ inp.focus(); }catch(e){} }
+    }
+  };
+  root.querySelectorAll('[data-hi]').forEach(inp=>{
+    inp.oninput = ()=>{
+      p.history[+inp.dataset.hi] = inp.value;
+      saveSoon(); refreshPreview();
+      const cnt = root.querySelector('#editSec h3 .rsub'); if(cnt) cnt.textContent = histOf(p).length + '개';
+    };
+    inp.onkeydown = e=>{
+      if(e.key !== 'Enter') return;
+      /* 엔터 = 바로 아래에 새 줄 */
+      const i = +inp.dataset.hi;
+      p.history.splice(i + 1, 0, '');
+      rerender(i + 1);
+    };
+  });
+  const swap = (i, j)=>{ const h = p.history; const t = h[i]; h[i] = h[j]; h[j] = t; };
+  root.querySelectorAll('[data-hup]').forEach(b=> b.onclick = ()=>{ const i = +b.dataset.hup; swap(i, i-1); rerender(); });
+  root.querySelectorAll('[data-hdown]').forEach(b=> b.onclick = ()=>{ const i = +b.dataset.hdown; swap(i, i+1); rerender(); });
+  root.querySelectorAll('[data-hdel]').forEach(b=> b.onclick = ()=>{ p.history.splice(+b.dataset.hdel, 1); rerender(); });
+  const at = root.querySelector('#hAddTop'); if(at) at.onclick = ()=>{ p.history.unshift(''); rerender(0); };
+  const ab = root.querySelector('#hAddBottom'); if(ab) ab.onclick = ()=>{ p.history.push(''); rerender(p.history.length - 1); };
+  const ba = root.querySelector('#bulkApply');
+  if(ba) ba.onclick = ()=>{
+    const lines = root.querySelector('#bulkText').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    confirmDialog('지금 검색기록을 지우고 적은 ' + lines.length + '줄로 바꿀까요?', ()=>{
+      p.history = lines; rerender(); toast('검색기록 ' + lines.length + '개로 바꿨습니다');
+    }, '바꾸기');
+  };
+}
+
+/* ----- 관리자 첫 화면 ----- */
+function renderAdminHome(resetScroll){
+  enforceBranchLock();
+  if(!curC1() && treePath.length){ treePath = []; }
+  if(treePath.length === 2 && !curC2()){ treePath = treePath.slice(0, 1); }
+  if(!editPerson()) editPid = '';
+  $('#adminTitle').textContent = '관리자';
+  const body = $('#paneHome');
+  const c = countAll(data);
+  const me = meRef();
+  const html = `
+    ${hasLocalEdits() ? `<div class="admin-section" style="background:#fff8d6;border:1px solid #f0dd8a">
+      <h3 style="color:#7a5b00">이 기기에만 저장된 수정이 있습니다</h3>
+      <div class="hint" style="margin-top:0;color:#7a5b00">지금 보이는 내용은 <b>이 기기에만</b> 저장되어 있고,
+        index.html 파일에는 아직 들어가지 않았습니다. 이 상태로 파일을 옮기면 <b>예전 내용</b>이 나옵니다.<br>
+        아래 <b>“새 index.html 만들기”</b>를 눌러 파일을 만든 뒤 그 파일을 옮기세요.</div>
+      <button class="btn btn-red btn-block" id="exportHtmlTop">새 index.html 만들기</button>
+    </div>` : ''}
+    <div class="admin-section">
+      <h3>지점 / 테마 / 인물</h3>
+      <div class="crumb">
+        ${treePath.length > treeMinDepth() ? '<button class="btn btn-ghost btn-sm" id="treeUp">↑ 상위 폴더</button>' : ''}
+        ${breadcrumbHtml()}
+      </div>
+      ${branchLocked() ? `<div class="hint" style="margin-top:0">이 폰은 <b>${esc(lockedC1().name)}</b> 지점 전용입니다.
+        다른 지점은 볼 수 없습니다.</div>` : ''}
+      <div class="drag-hint">끌어서 순서를 변경할 수 있습니다. (폰에서는 살짝 길게 누른 뒤 끌어주세요)</div>
+      <div id="treeBox">${treeItemsHtml()}</div>
+      <button class="btn btn-red btn-block" id="treeAdd" style="margin-top:4px">＋ ${curC2() ? '새 인물' : (curC1() ? '새 테마' : '새 지점')}</button>
+      <div class="hint">지금 이 기기의 “나”: <b>${me ? esc(me.c1.name + ' › ' + me.c2.name + ' › ' + me.p.name) : '고르지 않음'}</b><br>
+        ${curC2() ? '인물마다 검색기록이 따로 있습니다. 폰마다 <b>이 사람으로 보기</b>로 인물을 고르면 손님 화면에 그 사람의 검색기록이 보입니다.'
+                  : '지점 › 테마 › 인물 순서로 정리합니다. 이름 옆 <b>✎</b> 를 누르면 이름을 바꿀 수 있습니다.'}</div>
+    </div>
+
+    <div id="editBox"></div>
+
+    <div class="admin-section ${foldState.screen?'folded':''}">
+      <h3 class="foldable" data-fold="screen">검색창 꾸미기 (모든 인물 공통) <span class="fold-arrow">${foldState.screen?'▶':'▼'}</span></h3>
+      <div class="fold-body">
+        <div class="field"><label>검색창 안내 글자</label><input id="ed-ph" value="${esc(data.placeholder)}"></div>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0">
+            <input type="checkbox" id="ed-caret" ${data.caret!==false?'checked':''} style="width:auto"> 검색창에 깜빡이는 커서 표시 (검색창을 누른 것처럼)
+          </label>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="saveScreen">저장</button>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <h3>앱 / 데이터</h3>
+      <div class="field">
+        <label>앱 이름 (홈 화면에 표시될 이름)</label>
+        <input id="ed-appName" value="${esc(data.appName)}">
+      </div>
+      <div class="row-actions" style="margin-bottom:10px">
+        <button class="btn btn-ghost btn-sm" id="saveAppName">이름 저장</button>
+        <button class="btn btn-primary btn-sm" id="installBtn">앱 설치</button>
+        <button class="btn btn-ghost btn-sm" id="diagBtn">설치 진단</button>
+      </div>
+      <div class="kv" id="diagOut" style="white-space:pre-wrap;background:#f4f6f8;border-radius:8px;padding:8px;display:none"></div>
+      <div class="hint" style="margin-top:0">홈 화면 아이콘 이름은 <b>manifest.webmanifest</b> 파일의 이름(YouTube)으로 굳습니다.
+        여기서 바꾸면 화면 제목만 바뀝니다.</div>
+      <div class="kv">
+        지금 보이는 내용 <b>지점 ${c.c1}개 · 테마 ${c.c2}개 · 인물 ${c.people}명 · 검색기록 ${c.hist}개</b><br>
+        코드 버전 <b>${esc(CODE_VERSION)}</b><br>
+        파일 버전 <b>${esc(DATA_VERSION)}</b> · 지문 <b>${esc(DATA_FP)}</b><br>
+        폰에 저장된 버전 <b>${esc((storedBox()||{}).version || '없음')}</b> · 지문 <b>${esc((storedBox()||{}).fp || '없음')}</b><br>
+        주소 <b>${esc(location.origin + location.pathname)}</b><br>
+        서비스워커 <b id="swState">${esc(swState)}</b><br>
+        설치 가능 <b id="canInstall">${deferredInstall ? '예 — 설치 버튼을 누르세요' : '아직 아님'}</b><br>
+        저장 방식 <b id="storeKind">${esc(storeKind)}</b> · 영구 저장 <b id="persistState">${esc(persistState)}</b> · 내용 <b>${storageKB()} KB</b>
+      </div>
+      <button class="btn btn-primary btn-block" id="checkUpdate">새 파일 확인 (업데이트)</button>
+      <div class="kv" id="updInfo"></div>
+      <div class="hint">서버에 놓인 index.html 을 확인해, 내용이 다르면 캐시와 저장분을 지우고 새 파일로 다시 엽니다.</div>
+      <button class="btn btn-danger btn-block" id="resetFile">파일 원본으로 되돌리기</button>
+      <div class="hint">되돌리면 폰에서 수정한 내용이 사라지고, 설치된 파일에 들어있는 내용으로 돌아갑니다.</div>
+    </div>
+
+    <div class="admin-section">
+      <h3>백업 / 복원</h3>
+      <div class="hint" style="margin-top:0;margin-bottom:10px">모든 내용을 파일 하나로 내보내고, 다시 불러올 수 있습니다.</div>
+      <button class="btn btn-ghost btn-block" id="exportBtn">내보내기 (파일 저장)</button>
+      <button class="btn btn-ghost btn-block" id="importBtn">불러오기 (파일 열기)</button>
+      <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+      <button class="btn btn-red btn-block" id="exportHtmlBtn">새 index.html 만들기</button>
+      <div class="hint">지금 내용을 그대로 담은 배포용 index.html 을 만듭니다. 이 파일로 폴더의 index.html 을 바꾸면, 다른 폰에 설치할 때 이 내용이 들어갑니다.</div>
+    </div>`;
+  const scroller = wideAdmin() ? body : $('#adminBody');
+  const prevScroll = resetScroll ? 0 : scroller.scrollTop;
+  body.innerHTML = html;
+  scroller.scrollTop = prevScroll;
+  if(wideAdmin()) $('#editBox').innerHTML = '';
+  renderEditor();
+  finishAdminHome(body);
+}
+
+function finishAdminHome(body){
+  refreshAdminInfo();
+  $('#exportHtmlBtn').onclick = exportHtml;
+  const eht = $('#exportHtmlTop'); if(eht) eht.onclick = exportHtml;
+  $('#checkUpdate').onclick = ()=>{ toast('확인 중…'); checkForUpdate(true); };
+  $('#saveAppName').onclick = ()=>{
+    data.appName = $('#ed-appName').value.trim() || 'YouTube';
+    save(); applyAppIdentity(); toast('앱 이름 저장됨');
+  };
+  $('#saveScreen').onclick = ()=>{
+    data.placeholder = $('#ed-ph').value.trim() || 'YouTube 검색';
+    data.caret = $('#ed-caret').checked;
+    save(); renderGuest(); renderAdminHome(); toast('저장됨');
+  };
+  $('#installBtn').onclick = installApp;
+  $('#diagBtn').onclick = runDiag;
+  $('#resetFile').onclick = ()=> confirmDialog('폰에서 수정한 내용을 모두 지우고 파일 원본으로 되돌릴까요?', ()=>{
+    data = normalize(deepCopy(EMBEDDED_DATA)); baseFp = fingerprint(data);
+    save(); renderAdminHome(); toast('파일 원본으로 되돌렸습니다');
+  }, '되돌리기');
+  bindTreeSection(body);
+  $('#exportBtn').onclick = exportData;
+  $('#importBtn').onclick = ()=> $('#importFile').click();
+  $('#importFile').onchange = importData;
+}
+
+/* ----- 백업/복원 ----- */
+function downloadFile(name, text, mime){
+  const blob = new Blob([text], {type: mime || 'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+}
+function newVersion(){
+  const d = new Date(), p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+/* 서버 없이(파일을 직접 열었을 때도) 자기 자신의 소스를 만들어 낸다.
+   화면에 그려둔 내용은 열 때마다 다시 그리므로 비워서 내보낸다. */
+function selfHtml(){
+  const root = document.documentElement.cloneNode(true);
+  ['#histList','#branchList'].forEach(sel=>{ const el = root.querySelector(sel); if(el) el.innerHTML = ''; });
+  const ap = root.querySelector('#adminBody');
+  if(ap) ap.innerHTML = '<div class="apane" id="paneHome"></div><div class="apane" id="paneEdit"></div><div class="apane" id="panePrev"></div>';
+  const off = (sel, cls)=>{ const el = root.querySelector(sel); if(el) el.classList.remove(cls); };
+  off('#adminOverlay','active'); off('#pickBranch','show');
+  off('#modePill','show'); off('#confirmBox','show'); off('#toast','show');
+  const ts = root.querySelector('#toast'); if(ts) ts.textContent = '';
+  const gs = root.querySelector('#oldBrowserGap'); if(gs) gs.remove();
+  return '<!DOCTYPE html>\n' + root.outerHTML + '\n';
+}
+/* 호스팅 업체가 자동으로 끼워넣는 홍보·통계 코드를 걸러낸다. */
+function stripHostInjected(html){
+  let out = html;
+  out = out.replace(/<!--(?:(?!-->)[\s\S]){0,1000}?netlify\.new(?:(?!-->)[\s\S]){0,1000}?-->\s*/gi, '');
+  out = out.replace(/<meta\s+name="hosting-provider"[^>]*>\s*/gi, '');
+  out = out.replace(/<meta\s+name="netlify-deploy"[^>]*>\s*/gi, '');
+  out = out.replace(/<script\b[^>]*src="\/\.netlify\/[^>]*>\s*<\/script>\s*/gi, '');
+  return out;
+}
+/* 지금 내용을 담은 새 index.html 을 만든다 (데이터 구간만 교체) */
+function buildHtmlFrom(tpl){
+  const src = stripHostInjected(tpl);
+  const i = src.indexOf(MARK_S), j = src.indexOf(MARK_E);
+  if(i < 0 || j <= i) return null;
+  const ver = newVersion();
+  const json = JSON.stringify(data, null, 1).replace(/<\//g, '<\\/');
+  const block = MARK_S + ' 아래 두 줄이 이 파일에 들어있는 내용입니다. */\n'
+    + 'const DATA_VERSION = ' + JSON.stringify(ver) + ';\n'
+    + 'const EMBEDDED_DATA = ' + json + ';\n';
+  return { html: src.slice(0,i) + block + src.slice(j), version: ver };
+}
+function finishExportHtml(built){
+  if(!built){ toast('파일을 만들 수 없습니다'); return; }
+  downloadFile('index.html', built.html, 'text/html;charset=utf-8');
+  baseFp = fingerprint(data);
+  save();
+  toast('새 index.html 저장됨 · 버전 ' + built.version);
+  if($('#adminOverlay').classList.contains('active')) renderAdminHome();
+}
+function exportHtml(){
+  flushSave();
+  if(location.protocol.indexOf('http') !== 0){
+    confirmDialog(
+      '지금 화면에 열려 있는 상태로 파일을 만듭니다.\n기능이 바뀐 파일을 새로 받았다면 먼저 새로고침(F5) 후에 만들어 주세요.',
+      ()=> finishExportHtml(buildHtmlFrom(selfHtml())),
+      '만들기'
+    );
+    return;
+  }
+  fetch('./index.html?_ex=' + Date.now(), {cache:'no-store'})
+    .then(r=> r.ok ? r.text() : Promise.reject())
+    .then(tpl=> finishExportHtml(buildHtmlFrom(tpl)))
+    .catch(()=> finishExportHtml(buildHtmlFrom(selfHtml())));
+}
+function exportData(){
+  flushSave();
+  const payload = { app:'단서유튜브', version:DATA_VERSION, exportedAt:new Date().toISOString(), data:data };
+  downloadFile('단서유튜브_백업.json', JSON.stringify(payload,null,2), 'application/json');
+  toast('백업 파일을 저장했습니다');
+}
+function importData(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try {
+      const parsed = JSON.parse(reader.result);
+      const body = (parsed && parsed.data) ? parsed.data : parsed;
+      if(!body || !Array.isArray(body.tree)) throw new Error('bad');
+      data = normalize(body);
+      if(!baseFp) baseFp = fingerprint(normalize(deepCopy(EMBEDDED_DATA)));
+      save();
+      toast('불러왔습니다');
+      renderGuest();
+      renderAdminHome(true);
+    } catch(err){ toast('올바른 백업 파일이 아닙니다'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+/* ---------- 이벤트 연결 ----------
+   손님 화면은 아무것도 눌리지 않는다 (검색창·마이크·검색기록 모두 반응 없음).
+   ← 화살표를 5초 길게 누르면 관리자 모드. 관리자 상태에서는 마이크를 누르면 관리자 화면이 열린다. */
+$('#adminClose').onclick = goBack;
+$('#adminGuest').onclick = guestMode;
+$('#btnMic').onclick = ()=>{ if(isAdmin) openAdmin(); };
+window.addEventListener('popstate', closeTop);
+
+/* 길게 누를 때 나오는 복사/검색/이미지 저장 메뉴 차단 (입력칸과 관리자 모드는 예외) */
+document.addEventListener('contextmenu', e=>{
+  const t = e.target;
+  if(t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  if(isAdmin) return;
+  e.preventDefault();
+});
+document.addEventListener('dragstart', e=>{ if(!isAdmin) e.preventDefault(); });
+
+let pressTimer = null;
+const backEl = $('#btnBack');
+function startPress(){ clearTimeout(pressTimer); pressTimer = setTimeout(()=>{ openAdmin(); }, 5000); }
+function cancelPress(){ clearTimeout(pressTimer); }
+backEl.addEventListener('mousedown', startPress);
+backEl.addEventListener('touchstart', startPress, {passive:true});
+['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=> backEl.addEventListener(ev, cancelPress));
+
+/* ---------- 시작 ---------- */
+/* 첫 화면 정하기
+   - PC(넓은 화면)  : 편집용이므로 관리자 화면. 지점 잠금 없음.
+   - 폰 · 처음      : 지점 고르기 → 그 지점 안에서 테마·인물 고르기
+   - 폰 · 설정 끝난 뒤 : 손님 화면 (검색창을 누른 화면) */
+let bootTries = 0;
+function decideStartScreen(){
+  if(!data) return;
+  if(!window.innerWidth && bootTries < 20){ bootTries++; setTimeout(decideStartScreen, 200); return; }
+  if(wideAdmin()){
+    if(!isAdmin){ isAdmin = true; renderGuest(); openAdmin(!meRef()); }
+    return;
+  }
+  if(!lockedC1() && data.tree.length){ renderBranchPicker(); return; }
+  if(!meRef()){ if(!isAdmin){ isAdmin = true; renderGuest(); openAdmin(true); } return; }
+  renderGuest();
+}
+
+let bootErrors = [];
+function step(name, fn){
+  try{ fn(); }
+  catch(e){
+    bootErrors.push({ where:name, err:e });
+    try{ console.error('[단서유튜브] ' + name + ' 실패', e); }catch(x){}
+  }
+}
+function showBootError(){
+  const el = document.getElementById('histList');
+  if(!el) return;
+  const lines = bootErrors.map(b=>{
+    const e = b.err || {};
+    return '<b>' + esc(b.where) + '</b> — ' + esc(String(e.message || e.name || e));
+  });
+  el.innerHTML = '<div class="empty" style="user-select:text;-webkit-user-select:text">'
+    + '내용을 불러오지 못했습니다.<br><br>주소 끝에 <b>?reset=1</b> 을 붙여 다시 열어보세요.<br><br>'
+    + '<span style="font-size:11px">코드 버전 ' + esc(CODE_VERSION) + '<br>'
+    + (lines.length ? lines.join('<br>') : '저장된 내용을 읽는 중 응답이 없습니다') + '</span></div>';
+}
+
+(function boot(){
+  /* 주소 끝에 ?reset=1 을 붙여 열면 폰에 저장된 내용·고른 지점·인물·캐시를 전부 지우고 파일 내용으로 시작한다 */
+  let first = Promise.resolve();
+  if(/[?&]reset=1/.test(location.search)){
+    try{ [STORE_KEY, BRANCH_KEY, VIEW_KEY].forEach(k=>localStorage.removeItem(k)); }catch(e){}
+    try{ first = idbClear(); }catch(e){}
+    try{ if(window.caches && caches.keys) caches.keys().then(ks=>ks.forEach(k=>{ if(isMyCache(k)) caches.delete(k); })); }catch(e){}
+    try{
+      if(navigator.serviceWorker && navigator.serviceWorker.getRegistrations){
+        navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>{ if(isMySW(r)) r.unregister(); }));
+      }
+    }catch(e){}
+    try{ history.replaceState(null, '', location.pathname); }catch(e){}
+  }
+  first.catch(()=>{}).then(load).then(d=>{
+    data = d;
+    step('loadView', loadView);
+    step('loadBranch', loadBranch);
+    step('save', save);
+    step('renderGuest', renderGuest);
+    try{ askPersist().then(()=>{ try{ refreshAdminInfo(); }catch(e){} }); }catch(e){}
+    if(saveBlocked) setTimeout(()=>toast('저장된 내용을 읽지 못했습니다. 내용 보호를 위해 저장을 멈췄습니다 — 앱을 껐다 켜 주세요.'), 700);
+    step('decideStartScreen', decideStartScreen);
+    window.addEventListener('load', ()=> step('decideStartScreen', decideStartScreen));
+    if(bootErrors.length) showBootError();
+  }).catch(err=>{
+    bootErrors.push({ where:'load', err:err });
+    showBootError();
+  });
+})();
+setTimeout(function(){
+  if(!data){ bootErrors.push({ where:'load', err:{message:'저장된 내용을 읽는 중 응답이 없습니다'} }); showBootError(); }
+}, 6000);
+
+/* 서비스워커: 최신 파일 우선(network-first) + 예전 캐시 자동 삭제 */
+if(!('serviceWorker' in navigator)) swState = '이 브라우저는 지원 안 함';
+else if(location.protocol.indexOf('http') !== 0) swState = '파일 직접 열기 — 사용 불가';
+else {
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{ swState = '작동 중'; refreshAdminInfo(); });
+  navigator.serviceWorker.register('./sw.js?v=' + encodeURIComponent(DATA_VERSION), {updateViaCache:'none'})
+    .then(()=>{ swState = '등록됨 (제어 대기)'; refreshAdminInfo(); return navigator.serviceWorker.ready; })
+    .then(()=>{ swState = navigator.serviceWorker.controller ? '작동 중' : '등록됨 (새로고침하면 작동)'; refreshAdminInfo(); })
+    .catch(e=>{ swState = '등록 실패: ' + ((e && e.message) ? e.message : String(e)); refreshAdminInfo(); });
+}
+
+/* 실행할 때마다 서버의 index.html 을 확인해서 새 파일이면 갈아끼운다 */
+setTimeout(function once(){
+  if(!data){ setTimeout(once, 500); return; }
+  checkForUpdate(false);
+}, 1500);
+</script>
+
+</body></html>
